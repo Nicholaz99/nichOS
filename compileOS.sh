@@ -16,7 +16,7 @@ bcc -ansi -c -o echo.o echo.c
 bcc -ansi -c -o mkdir.o mkdir.c
 bcc -ansi -c -o cat.o cat.c
 bcc -ansi -c -o rm.o rm.c
-# bcc -ansi -c -o ps.o ps.c
+bcc -ansi -c -o ps.o ps.c
 ld86 -o shell -d shell.o lib_asm.o
 ld86 -o 'ls' -d ls.o lib_asm.o
 ld86 -o 'cd' -d cd.o lib_asm.o
@@ -24,7 +24,7 @@ ld86 -o 'echo' -d echo.o lib_asm.o
 ld86 -o 'mkdir' -d mkdir.o lib_asm.o
 ld86 -o 'cat' -d cat.o lib_asm.o
 ld86 -o 'rm' -d rm.o lib_asm.o
-# ld86 -o 'ps' -d ps.o lib_asm.o
+ld86 -o 'ps' -d ps.o lib_asm.o
 ./loadFile keyproc3a
 ./loadFile keyproc3b
 ./loadFile rm
@@ -34,5 +34,5 @@ ld86 -o 'rm' -d rm.o lib_asm.o
 ./loadFile cd
 ./loadFile ls
 ./loadFile shell
-# ./loadFile ps
+./loadFile ps
 ./loadFile test.txt

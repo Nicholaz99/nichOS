@@ -1,122 +1,161 @@
-void getCommand(char * cmd, char * argv, char * argc);
-void strToBuff(char * buffer, char * str);
-int strEqual(char * a, char * b);
+#define ARGS_CHAR_COMMAND 32
+#define TOP_SEGMENT 0x2000
+#define SECTOR_SIZE 512
+#define TRUE 1
+#define FALSE 0
 
-main() {
-    char ch[2];
-    char command[17];
-    char new_cmd[17];
-    char argv[512];
-    char argc;
-    char curdir;
-    int stat;
-    int i;
-    enableInterrupts();
-    while (1) {
-        stat = -1;
-        interrupt(0x21, 0x00, "\r\n$ ", 0x0, 0x0);
-        getCommand(command, argv, &argc);
-        interrupt(0x21, 0x0, "\r\n", 0,0);
-        interrupt(0x21, 0x21, &curdir, 0, 0);
+int changeToNumber(char *dest);
+int compareString(char *str, char *dest);
 
-        interrupt(0x21, 0x23, 0, ch, 0);
-
-        if (strEqual(command, "resume")) {
-            interrupt(0x21, 0x33, ((ch[0] - '0')*4096)+8192, &stat, 0);
-        } else if (strEqual(command, "ps")) {
-            interrupt(0x21, 0x35, 0,0,0);
-        } else if (strEqual(command, "pause")) {
-            interrupt(0x21, 0x32, ((ch[0] - '0')*4096)+8192, &stat, 0);
-        } else if (strEqual(command, "kill")) {
-            interrupt(0x21, 0x34, ((ch[0] - '0')*4096)+8192, &stat, 0);
-        } else if (command[0]=='.' && command[1]=='/') {
-            interrupt(0x21, (0xFF << 8) | 0x06, command+2, &stat, 0);
-        }else {
-            // strToBuff(&new_cmd, &command);
-            interrupt(0x21, (0xFF << 8) | 0x06 , command, &stat, 0);
-        }
+int main()
+{
+  char command[17], exec[15];
+  char argv[SECTOR_SIZE], input[SECTOR_SIZE];
+  char arguments[ARGS_CHAR_COMMAND];
+  char argc;
+  char currDir;
+  int i, commandLength, count_arg;
+  int result;
+  int success;
+  enableInterrupts();
+  while (TRUE)
+  {
+    interrupt(0x21, 0x00, "\n\r$ ", 0, 0);
+    interrupt(0x21, 0x1, input, TRUE, 0);
+    i = 0;
+    while (input[i] != '\0')
+    {
+      if (input[i] == ' ')
+      {
+        break;
+      }
+      i++;
     }
+    commandLength = i;
+    if (input[i] == '\0')
+    {
+      commandLength = -1;
+    }
+    i = 0;
+    count_arg = 0;
+    while (input[i] != '\0')
+    {
+      if (input[i] == ' ')
+      {
+        count_arg++;
+      }
+      i++;
+    }
+    i = 0;
+    while (i < commandLength || (input[i] != '\0' && commandLength == -1))
+    {
+      command[i] = input[i];
+      i++;
+    }
+    command[i] = '\0';
+    i = 0;
+    while (input[i + commandLength] != '\0')
+    {
+      argv[i] = input[i + commandLength + 1];
+      i++;
+    }
+    argc = (char)count_arg;
+    interrupt(0x21, 0x21, &currDir, 0, 0);
+    interrupt(0x21, 0x20, currDir, argc, argv);
+    interrupt(0x21, 0x00, "\r\n", 0, 0);
+    // interrupt(0x21, 0xFF << 8 | 0x23, 0, arguments, 0);
+    // interrupt(0x21, (currDir << 8) | 0x32, (changeToNumber(arguments) * 0x1000) + TOP_SEGMENT, &result, 0);
+    // interrupt(0x21, 0xFF << 8 | 0x31, 0, 0, 0);
+    interrupt(0x21, 0x21, &currDir, 0, 0);
+
+    result = -1;
+    if (command[0] == '.' && command[1] == '/')
+    {
+      for (i = 0; i < 15; i++)
+      {
+        exec[i] = command[i + 2];
+      }
+      interrupt(0x21, (currDir << 8) | 0x06, exec, &result, FALSE);
+    }
+    else if (compareString(command, "pause"))
+    {
+      interrupt(0x21, 0xFF << 8 | 0x23, 0, arguments, 0);
+      interrupt(0x21, (currDir << 8) | 0x32, (changeToNumber(arguments) * 0x1000) + TOP_SEGMENT, &result, 0);
+      interrupt(0x21, 0xFF << 8 | 0x31, 0, 0, 0);
+    }
+    else if (compareString(command, "resume"))
+    {
+      // interrupt(0x21, 0xFF << 8 | 0x23, 0, arguments, 0);
+      // interrupt(0x21, (currDir << 8) | 0x32, (changeToNumber(arguments) * 0x1000) + TOP_SEGMENT, &result, 0);
+      // interrupt(0x21, 0xFF << 8 | 0x31, 0, 0, 0);
+      interrupt(0x21, 0xFF << 8 | 0x23, 0, arguments, 0);
+      interrupt(0x21, (currDir << 8) | 0x33, (changeToNumber(arguments) * 0x1000) + TOP_SEGMENT, &result, 0);
+      interrupt(0x21, 0xFF << 8 | 0x31, 0, 0, 0);
+    }
+    else if (compareString(command, "kill"))
+    {
+      interrupt(0x21, 0xFF << 8 | 0x23, 0, arguments, 0);
+      interrupt(0x21, (currDir << 8) | 0x34, (changeToNumber(arguments) * 0x1000) + TOP_SEGMENT, &result, 0);
+      interrupt(0x21, 0xFF << 8 | 0x31, 0, 0, 0);
+      // interrupt(0x21, 0xFF << 8 | 0x23, 0, arguments, 0);
+      // interrupt(0x21, (currDir << 8) | 0x32, (changeToNumber(arguments) * 0x1000) + TOP_SEGMENT, &result, 0);
+      // interrupt(0x21, 0xFF << 8 | 0x31, 0, 0, 0);
+    }
+    else
+    {
+      //Parallel Shell
+      if (argc > 0)
+      {
+        interrupt(0x21, 0xFF << 8 | 0x23, argc - 1, arguments, 0);
+        if (compareString(arguments, "&"))
+        {
+          interrupt(0x21, (0xFF << 8) | 0x06, command, &result, TRUE);
+        }
+        else
+        {
+          interrupt(0x21, (0xFF << 8) | 0x06, command, &result, FALSE);
+        }
+      }
+      else
+      {
+        interrupt(0x21, (0xFF << 8) | 0x06, command, &result, FALSE);
+      }
+    }
+  }
+  return 0;
 }
 
-int strEqual(char * a, char * b) {
-    int i = 0;
-    while (a[i] != '\0' && b[i] != '\0') {
-        if (a[i] != b[i]) {
-            return 0;
-        }
-        i++;
-    }
-
-    if (a[i] != b[i]) {
-        return 0;
-    } else {
-        return 1;
-    }
+int changeToNumber(char *dest)
+{
+  int result = 0;
+  int i = 0;
+  while (dest[i] != '\0')
+  {
+    result *= 10;
+    result += dest[i] - '0';
+    i++;
+  }
+  return result;
 }
 
-void getCommand(char * cmd, char * argv, char * argc) {
-    char curdir;
-    char temp[512];
-    int pos, i, count, j;
-    interrupt(0x21, 0x1, temp, 1, 0);
-    pos = -1;
-    i = 0;
-    while (temp[i] != '\0') {
-        if (' ' == temp[i]) {
-            pos = i;
-        }
-        i++;
+int compareString(char *str, char *dest)
+{
+  int i;
+  i = 0;
+  while (str[i] != '\0' || dest[i] != '\0')
+  {
+    if (str[i] != dest[i])
+    {
+      break;
     }
-
-    count = 0;
-    i = 0;
-    while (temp[i] != '\0') {
-        if (' ' == temp[i]) {
-            count++;
-        }
-        i++;
-    }
-
-    i = 0;
-    while (i < pos || (temp[i] != '\0' && pos == -1)) {
-        cmd[i] = temp[i];
-        i++;
-    }
-    cmd[i] = '\0';
-
-    i = 0;
-    while (temp[i+pos] != '\0') {
-        argv[i] = temp[i+pos+1];
-        i++;
-    }
-
-    *argc = (char) count;
-
-    interrupt(0x21, 0x21, &curdir, 0, 0);
-    interrupt(0x21, 0x20, curdir, *argc, argv);
+    i++;
+  }
+  if (str[i] != dest[i])
+  {
+    return FALSE;
+  }
+  else
+  {
+    return TRUE;
+  }
 }
-
-/*int findCharInStr(char * buffer, char c) {
-    int i = 0;
-    while (buffer[i] != '\0') {
-        if (c == buffer[i]) {
-            return i;
-        }
-        i++;
-    }
-
-    return -1;
-}
-
-int countCharInStr(char * buffer, char c) {
-    int i = 0;
-    int count = 0;
-    while (buffer[i] != '\0') {
-        if (c == buffer[i]) {
-            count++;
-        }
-        i++;
-    }
-
-    return count;
-}*/

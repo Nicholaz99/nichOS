@@ -1,5 +1,6 @@
 #define DIRS_SECTOR 0x101
 #define FILES_SECTOR 0x102
+#define SECTOR_SIZE 512
 
 void readSector(char * buffer, int sector);
 
@@ -21,20 +22,24 @@ main() {
     char index;
     int stat;
     enableInterrupts();
-
+    // Ambil current directory & jumlah arg
     interrupt(0x21, 0x21, &curdir, 0, 0);
     interrupt(0x21, 0x22, &argc, 0, 0);
+    // Ambil argv di kernel
     for (i = 0; i < argc; ++i) {
         interrupt(0x21, 0x23, i, argv[i], 0);
     }
+    // Print current directory sekarang
     interrupt(0x21, 0x0, argv[0], 0, 0);
+    // Cari direktori sesuai hasil input, lalu pindah ke sana
     traverseDir(argv[0], &stat, &curdir);
     if (argv[0][0] != '\0') {
         index = getIndex(argv[0], curdir, DIRS_SECTOR);
-    } else {
+    }
+    else {
         index = curdir;
     }
-
+    // Ubah args pada kernel
     if (index != -2) {
         interrupt(0x21, 0x20, index, argc, argv);
     }
@@ -64,14 +69,15 @@ int div(int a, int b) {
   return q-1;
 }
 
+// Dapatkan indeks Sektor dari name pada sektor Sector
 char getIndex(char * name, char parent, int sector) {
-    char dir[512];
+    char dir[SECTOR_SIZE];
     int i, j, k, count;
     char result;
 
     readSector(dir, sector);
 
-    for (i = 0; i < 512; i += 16) {
+    for (i = 0; i < SECTOR_SIZE; i += 16) {
         if (dir[i] != parent) {
             continue;
         }
@@ -102,14 +108,14 @@ char getIndex(char * name, char parent, int sector) {
     return -2;
 }
 
+// Fungsi rekursif untuk mendapatkan nama file nya saja dari sebuah Path
 void traverseDir(char * path, int * result, char * parentIndex) {
-    char dir[512];
+    char dir[SECTOR_SIZE];
     int i, j, k, count;
     int len;
     int parent;
 
     len = findCharInStr(path, '/');
-    //printString(path);
 
     if (len == 0) {
         while(path[i+len] != '\0') {

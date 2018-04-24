@@ -61,7 +61,7 @@ void writeName (char *entries, int index, char *name) {
 
 int findUnusedEntry (char *entries) {
   int i;
-  for (i = 50; i < MAX_ENTRIES; ++i) {
+  for (i = 0; i < MAX_ENTRIES; ++i) {
     if (entries[i * ENTRY_LENGTH + NAME_OFFSET] == '\0') {
       return i;
     }
