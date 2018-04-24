@@ -15,6 +15,7 @@ main () {
     char name[15];
     int i,j;
     char result;
+    enableInterrupts();
     //parent = 0xFF;
 
     interrupt(0x21, 0x21, &parent, 0, 0);

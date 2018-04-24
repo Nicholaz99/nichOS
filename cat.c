@@ -9,6 +9,7 @@ main() {
     int i;
     char buffer[512*16];
     char temp[50];
+    enableInterrupts();
 
     interrupt(0x21, 0x21, &curdir, 0, 0);
     interrupt(0x21, 0x22, &argc, 0, 0);

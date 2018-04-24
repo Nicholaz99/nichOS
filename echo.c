@@ -3,6 +3,7 @@ main() {
     char argc;
     int i;
     char stat;
+    enableInterrupts();
 
     interrupt(0x21, 0x22, &argc, 0, 0);
     //interrupt(0x10, 0xE00 + argc + '0', 0, 0, 0);

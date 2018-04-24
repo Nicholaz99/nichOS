@@ -20,6 +20,7 @@ main() {
     char argv[8][50];
     char index;
     int stat;
+    enableInterrupts();
 
     interrupt(0x21, 0x21, &curdir, 0, 0);
     interrupt(0x21, 0x22, &argc, 0, 0);

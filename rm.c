@@ -5,6 +5,7 @@ main() {
     char argv[2][50];
     char curdir;
     int stat;
+    enableInterrupts();
 
     interrupt(0x21, 0x21, &curdir, 0, 0);
     interrupt(0x21, 0x22, &argc, 0, 0);

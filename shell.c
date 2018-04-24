@@ -1,36 +1,56 @@
 void getCommand(char * cmd, char * argv, char * argc);
-int findCharInStr(char * buffer, char c);
-int findCharInStr(char * buffer, char c);
+void strToBuff(char * buffer, char * str);
+int strEqual(char * a, char * b);
 
 main() {
+    char ch[2];
     char command[17];
-    char new_cmd[15];
+    char new_cmd[17];
     char argv[512];
     char argc;
     char curdir;
-    int i;
     int stat;
-    stat = -1;
+    int i;
+    enableInterrupts();
+    while (1) {
+        stat = -1;
+        interrupt(0x21, 0x00, "\r\n$ ", 0x0, 0x0);
+        getCommand(command, argv, &argc);
+        interrupt(0x21, 0x0, "\r\n", 0,0);
+        interrupt(0x21, 0x21, &curdir, 0, 0);
 
-    interrupt(0x21, 0x00, "\r\n$ ", 0x0, 0x0);
+        interrupt(0x21, 0x23, 0, ch, 0);
 
-    getCommand(command, argv, &argc);
-
-    interrupt(0x21, 0x0, "\r\n", 0,0);
-    interrupt(0x21, 0x21, &curdir, 0, 0);
-
-    if (command[0] == '.' && command[1] =='/') {
-        for (i = 2; i < 17; i++) {
-            new_cmd[i-2] = command[i];
+        if (strEqual(command, "resume")) {
+            interrupt(0x21, 0x33, ((ch[0] - '0')*4096)+8192, &stat, 0);
+        } else if (strEqual(command, "ps")) {
+            interrupt(0x21, 0x35, 0,0,0);
+        } else if (strEqual(command, "pause")) {
+            interrupt(0x21, 0x32, ((ch[0] - '0')*4096)+8192, &stat, 0);
+        } else if (strEqual(command, "kill")) {
+            interrupt(0x21, 0x34, ((ch[0] - '0')*4096)+8192, &stat, 0);
+        } else if (command[0]=='.' && command[1]=='/') {
+            interrupt(0x21, (0xFF << 8) | 0x06, command+2, &stat, 0);
+        }else {
+            // strToBuff(&new_cmd, &command);
+            interrupt(0x21, (0xFF << 8) | 0x06 , command, &stat, 0);
         }
-        //interrupt(0x21, 0x0, "MASUK\r\n", 0, 0);
-        interrupt(0x21, (curdir << 8) | 0x06 , new_cmd, 0x2000, &stat);
-    } else {
-        interrupt(0x21, (0xFF << 8) | 0x06, command, 0x2000, &stat);
+    }
+}
+
+int strEqual(char * a, char * b) {
+    int i = 0;
+    while (a[i] != '\0' && b[i] != '\0') {
+        if (a[i] != b[i]) {
+            return 0;
+        }
+        i++;
     }
 
-    if (stat == -1) {
-        interrupt(0x21, 0x07, &stat, 0, 0);
+    if (a[i] != b[i]) {
+        return 0;
+    } else {
+        return 1;
     }
 }
 
@@ -38,9 +58,24 @@ void getCommand(char * cmd, char * argv, char * argc) {
     char curdir;
     char temp[512];
     int pos, i, count, j;
-    interrupt(0x21, 0x1, temp, 0, 0);
-    pos = findCharInStr(temp, ' ');
-    count = countCharInStr(temp, ' ');
+    interrupt(0x21, 0x1, temp, 1, 0);
+    pos = -1;
+    i = 0;
+    while (temp[i] != '\0') {
+        if (' ' == temp[i]) {
+            pos = i;
+        }
+        i++;
+    }
+
+    count = 0;
+    i = 0;
+    while (temp[i] != '\0') {
+        if (' ' == temp[i]) {
+            count++;
+        }
+        i++;
+    }
 
     i = 0;
     while (i < pos || (temp[i] != '\0' && pos == -1)) {
@@ -61,7 +96,7 @@ void getCommand(char * cmd, char * argv, char * argc) {
     interrupt(0x21, 0x20, curdir, *argc, argv);
 }
 
-int findCharInStr(char * buffer, char c) {
+/*int findCharInStr(char * buffer, char c) {
     int i = 0;
     while (buffer[i] != '\0') {
         if (c == buffer[i]) {
@@ -84,4 +119,4 @@ int countCharInStr(char * buffer, char c) {
     }
 
     return count;
-}
+}*/
